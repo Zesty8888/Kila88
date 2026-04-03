@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Heart, Minus, Plus, ShoppingCart, Star, MessageSquare, Share2 } from 'lucide-react'
 import { useCart, useFavorites, useToast, useUser } from '@/store'
@@ -6,7 +6,9 @@ import { formatPrice, cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Rating } from '@/components/ui/rating'
 import { Badge } from '@/components/ui/badge'
-import { getProductById, getReviewsByProductId } from '@/data/mock'
+import { api } from '@/lib/api'
+import { normalizeProduct, normalizeReview } from '@/types'
+import type { Product, Review } from '@/types'
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -17,10 +19,33 @@ export function ProductDetailPage() {
   const { isAuthenticated } = useUser()
   const [quantity, setQuantity] = useState(1)
   const [activeImageIdx, setActiveImageIdx] = useState(0)
+  const [product, setProduct] = useState<Product | null>(null)
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const product = id ? getProductById(id) : undefined
-  const reviews = id ? getReviewsByProductId(id) : []
+  useEffect(() => {
+    if (!id) return
+    setLoading(true)
+    api.get(`/products/${id}`).then(res => {
+      if (res.success && res.data) {
+        setProduct(normalizeProduct(res.data.product))
+        if (res.data.reviews) {
+          setReviews(res.data.reviews.map(normalizeReview))
+        }
+      }
+      setLoading(false)
+    })
+  }, [id])
+
   const favorite = id ? isFavorite(id) : false
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
+      </div>
+    )
+  }
 
   if (!product) {
     return (
@@ -131,7 +156,7 @@ export function ProductDetailPage() {
           <h1 className="mt-3 text-lg font-bold text-foreground leading-tight">{product.name}</h1>
           <div className="mt-2 flex items-center gap-4">
             <Rating value={product.rating} size="sm" showValue />
-            <span className="text-xs text-muted-foreground">{product.reviewCount} 评价</span>
+            <span className="text-xs text-muted-foreground">{product.reviewCount || reviews.length} 评价</span>
             <span className="text-xs text-muted-foreground">{product.sales} 已售</span>
           </div>
           {product.tags && product.tags.length > 0 && (
@@ -168,9 +193,6 @@ export function ProductDetailPage() {
               <MessageSquare className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-bold text-foreground">用户评价 ({reviews.length})</h3>
             </div>
-            {reviews.length > 3 && (
-              <span className="text-xs text-muted-foreground">查看全部</span>
-            )}
           </div>
           {reviews.length > 0 ? (
             <div className="mt-3 space-y-4">
@@ -179,7 +201,7 @@ export function ProductDetailPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-                        {review.userName.charAt(0)}
+                        {(review.userName || '匿')[0]}
                       </div>
                       <span className="text-sm font-medium text-foreground">{review.userName}</span>
                     </div>
@@ -190,14 +212,6 @@ export function ProductDetailPage() {
                     </div>
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">{review.content}</p>
-                  {review.reply && (
-                    <div className="mt-2 rounded-lg bg-secondary/50 p-2.5">
-                      <p className="text-xs text-muted-foreground">
-                        <span className="font-medium text-primary">商家回复：</span>
-                        {review.reply}
-                      </p>
-                    </div>
-                  )}
                   <p className="mt-1 text-[10px] text-muted-foreground/60">{review.date}</p>
                 </div>
               ))}

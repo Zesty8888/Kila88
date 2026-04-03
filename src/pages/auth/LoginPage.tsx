@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const { login } = useUser()
+  const { login, register } = useUser()
   const toast = useToast()
   const [isRegister, setIsRegister] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -16,9 +16,11 @@ export function LoginPage() {
     password: '',
   })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
 
     if (!form.email || !form.password) {
       toast('请填写完整信息', 'error')
@@ -31,12 +33,23 @@ export function LoginPage() {
     }
 
     setLoading(true)
-    setTimeout(() => {
-      login(isRegister ? form.name : form.email.split('@')[0], form.email)
+
+    let err: string | null
+    if (isRegister) {
+      err = await register(form.name, form.email, form.password)
+    } else {
+      err = await login(form.email, form.password)
+    }
+
+    setLoading(false)
+
+    if (err) {
+      setError(err)
+      toast(err, 'error')
+    } else {
       toast(isRegister ? '注册成功，欢迎来到 LUXE Mall！' : '登录成功！')
-      setLoading(false)
       navigate('/')
-    }, 600)
+    }
   }
 
   return (
@@ -65,6 +78,12 @@ export function LoginPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+          {error && (
+            <div className="rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
           {isRegister && (
             <div>
               <label className="text-xs font-medium text-muted-foreground">昵称</label>
@@ -123,7 +142,7 @@ export function LoginPage() {
         {/* Switch mode */}
         <div className="mt-6 text-center">
           <button
-            onClick={() => setIsRegister(!isRegister)}
+            onClick={() => { setIsRegister(!isRegister); setError('') }}
             className="text-sm text-muted-foreground transition-smooth hover:text-primary"
           >
             {isRegister ? '已有账号？去登录' : '没有账号？去注册'}
@@ -133,7 +152,7 @@ export function LoginPage() {
         {/* Quick login hint */}
         <div className="mt-8 rounded-xl bg-primary/5 p-3 text-center">
           <p className="text-xs text-muted-foreground">
-            演示模式：输入任意邮箱和密码即可体验
+            测试账号：user@luxe.com / user123
           </p>
         </div>
       </div>

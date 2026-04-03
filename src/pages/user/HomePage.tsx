@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, ChevronRight, Zap, TrendingUp, Sparkles, Smartphone, Shirt, Home as HomeIcon } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-import { products, categories } from '@/data/mock'
+import { api } from '@/lib/api'
+import { normalizeProduct } from '@/types'
+import type { Product } from '@/types'
 import { Rating } from '@/components/ui/rating'
 import { Badge } from '@/components/ui/badge'
 
@@ -12,19 +14,28 @@ const banners = [
   { id: 3, image: '/images/hero-banner-3.png', title: '美妆盛典' },
 ]
 
+const categories = [
+  { id: 'all', name: '全部', icon: 'Grid3X3' },
+  { id: '电子产品', name: '电子产品', icon: 'Smartphone' },
+  { id: '服装', name: '服装', icon: 'Shirt' },
+  { id: '美妆', name: '美妆', icon: 'Sparkles' },
+  { id: '家居', name: '家居', icon: 'Home' },
+]
+
 const categoryIcons: Record<string, React.ReactNode> = {
   'Grid3X3': <Sparkles className="h-5 w-5" />,
   'Smartphone': <Smartphone className="h-5 w-5" />,
   'Shirt': <Shirt className="h-5 w-5" />,
   'Sparkles': <Sparkles className="h-5 w-5" />,
   'Home': <HomeIcon className="h-5 w-5" />,
-  'Dumbbell': <TrendingUp className="h-5 w-5" />,
 }
 
 export function HomePage() {
   const navigate = useNavigate()
   const [currentBanner, setCurrentBanner] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
+  const [saleProducts, setSaleProducts] = useState<Product[]>([])
+  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -33,8 +44,19 @@ export function HomePage() {
     return () => clearInterval(timer)
   }, [])
 
-  const saleProducts = products.filter(p => p.isOnSale)
-  const recommendedProducts = products.filter(p => p.rating >= 4.7)
+  // Fetch products from API
+  useEffect(() => {
+    api.get('/products?sale=true&limit=8').then(res => {
+      if (res.success && res.data?.products) {
+        setSaleProducts(res.data.products.map(normalizeProduct))
+      }
+    })
+    api.get('/products?sort=sales&limit=9').then(res => {
+      if (res.success && res.data?.products) {
+        setRecommendedProducts(res.data.products.map(normalizeProduct))
+      }
+    })
+  }, [])
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -88,11 +110,9 @@ export function HomePage() {
                 </div>
               ))}
             </div>
-            {/* Banner title overlay */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-foreground/60 to-transparent p-4">
               <p className="text-sm font-bold text-primary-foreground">{banners[currentBanner].title}</p>
             </div>
-            {/* Dots */}
             <div className="absolute bottom-3 right-4 flex gap-1.5">
               {banners.map((_, i) => (
                 <button
@@ -112,7 +132,7 @@ export function HomePage() {
         {/* Categories */}
         <section className="mt-6">
           <div className="grid grid-cols-5 gap-2">
-            {categories.slice(0, 5).map(cat => (
+            {categories.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => navigate(`/search?category=${encodeURIComponent(cat.id)}`)}
@@ -187,7 +207,7 @@ export function HomePage() {
             <h2 className="text-base font-bold text-foreground">为你推荐</h2>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3">
-            {(recommendedProducts.length > 0 ? recommendedProducts : products).map(product => (
+            {recommendedProducts.map(product => (
               <button
                 key={product.id}
                 onClick={() => navigate(`/product/${product.id}`)}

@@ -4,7 +4,6 @@ import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react'
 import { useCart, useOrders, useToast, useUser } from '@/store'
 import { formatPrice } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import type { Order } from '@/types'
 
 export function CartPage() {
   const navigate = useNavigate()
@@ -45,35 +44,25 @@ export function CartPage() {
     )
   }
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!address.name || !address.phone || !address.detail) {
       toast('请填写完整的收货信息', 'error')
       return
     }
     setCheckingOut(true)
 
-    const order: Order = {
-      id: `ORD-${Date.now()}`,
-      items: items.map(item => ({
-        product: item.product,
-        quantity: item.quantity,
-        price: item.product.price * item.quantity,
-      })),
-      totalPrice,
-      status: 'pending',
-      createdAt: new Date().toLocaleString('zh-CN'),
-      addressName: address.name,
-      addressPhone: address.phone,
-      addressDetail: address.detail,
+    const result = await placeOrder(address.name, address.phone, address.detail)
+
+    if (result.error) {
+      toast(result.error, 'error')
+      setCheckingOut(false)
+      return
     }
 
-    setTimeout(() => {
-      placeOrder(order)
-      toast('订单提交成功！')
-      setShowCheckoutModal(false)
-      setCheckingOut(false)
-      navigate('/profile')
-    }, 800)
+    toast('订单提交成功！')
+    setShowCheckoutModal(false)
+    setCheckingOut(false)
+    navigate('/profile')
   }
 
   return (
@@ -106,21 +95,21 @@ export function CartPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                    onClick={() => updateQuantity(String(item.product.id), item.quantity - 1)}
                     className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary text-foreground transition-smooth hover:bg-primary/10"
                   >
                     <Minus className="h-3 w-3" />
                   </button>
                   <span className="w-8 text-center text-sm font-medium text-foreground">{item.quantity}</span>
                   <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                    onClick={() => updateQuantity(String(item.product.id), item.quantity + 1)}
                     className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary text-foreground transition-smooth hover:bg-primary/10"
                   >
                     <Plus className="h-3 w-3" />
                   </button>
                 </div>
                 <button
-                  onClick={() => { removeFromCart(item.product.id); toast('已移除商品') }}
+                  onClick={() => { removeFromCart(String(item.product.id)); toast('已移除商品') }}
                   className="text-muted-foreground transition-smooth hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />

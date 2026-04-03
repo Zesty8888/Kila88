@@ -10,3 +10,6 @@ server
 nul
 *.png
 !public/**/*.png
+*.db
+*.db-shm
+*.db-wal

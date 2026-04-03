@@ -1,9 +1,20 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { formatPrice, cn } from '@/lib/utils'
-import { categories, searchProducts } from '@/data/mock'
+import { api } from '@/lib/api'
+import { normalizeProduct } from '@/types'
+import type { Product } from '@/types'
 import { Rating } from '@/components/ui/rating'
+
+const categories = [
+  { id: 'all', name: '全部' },
+  { id: '电子产品', name: '电子产品' },
+  { id: '服装', name: '服装' },
+  { id: '美妆', name: '美妆' },
+  { id: '家居', name: '家居' },
+  { id: '运动', name: '运动' },
+]
 
 export function SearchPage() {
   const navigate = useNavigate()
@@ -17,11 +28,25 @@ export function SearchPage() {
   const [activeCategory, setActiveCategory] = useState(initialCategory)
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc' | 'sales'>('default')
   const [showFilter, setShowFilter] = useState(false)
+  const [results, setResults] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const results = useMemo(
-    () => searchProducts(query, activeCategory, sortBy, isSaleOnly),
-    [query, activeCategory, sortBy, isSaleOnly]
-  )
+  // Fetch from API when filters change
+  useEffect(() => {
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (query) params.set('q', query)
+    if (activeCategory && activeCategory !== 'all') params.set('category', activeCategory)
+    if (sortBy !== 'default') params.set('sort', sortBy)
+    if (isSaleOnly) params.set('sale', 'true')
+
+    api.get(`/products?${params.toString()}`).then(res => {
+      if (res.success && res.data?.products) {
+        setResults(res.data.products.map(normalizeProduct))
+      }
+      setLoading(false)
+    })
+  }, [query, activeCategory, sortBy, isSaleOnly])
 
   return (
     <div className="min-h-screen">
@@ -103,9 +128,11 @@ export function SearchPage() {
 
       {/* Results */}
       <div className="mx-auto max-w-lg px-4 py-4">
-        <p className="mb-3 text-xs text-muted-foreground">共找到 {results.length} 件商品</p>
+        <p className="mb-3 text-xs text-muted-foreground">
+          {loading ? '搜索中...' : `共找到 ${results.length} 件商品`}
+        </p>
 
-        {results.length === 0 ? (
+        {!loading && results.length === 0 ? (
           <div className="flex flex-col items-center py-20">
             <Search className="h-12 w-12 text-muted-foreground/30" />
             <p className="mt-4 text-sm text-muted-foreground">未找到相关商品</p>

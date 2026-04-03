@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Heart, Settings, MapPin, Clock, Package, Truck, CheckCircle, XCircle, LogOut, Bell, Lock, User as UserIcon } from 'lucide-react'
 import { useUser, useFavorites, useOrders, useToast } from '@/store'
 import { formatPrice, cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { getProductById } from '@/data/mock'
+import { api } from '@/lib/api'
+import { normalizeProduct } from '@/types'
+import type { Product } from '@/types'
 
 const statusConfig = {
   pending: { label: '待付款', icon: Clock, color: 'text-warning' },
@@ -21,6 +23,20 @@ export function ProfilePage() {
   const { favorites } = useFavorites()
   const { orders } = useOrders()
   const [activeTab, setActiveTab] = useState<'orders' | 'favorites' | 'settings'>('orders')
+  const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([])
+
+  // Fetch favorite products from API
+  useEffect(() => {
+    if (favorites.length > 0) {
+      api.get('/favorites').then(res => {
+        if (res.success && res.data?.favorites) {
+          setFavoriteProducts(res.data.favorites.map((f: any) => normalizeProduct(f.product)))
+        }
+      })
+    } else {
+      setFavoriteProducts([])
+    }
+  }, [favorites])
 
   const handleLogout = () => {
     logout()
@@ -56,10 +72,6 @@ export function ProfilePage() {
     )
   }
 
-  const favoriteProducts = favorites
-    .map(id => getProductById(id))
-    .filter(Boolean)
-
   return (
     <div className="min-h-screen pb-4">
       {/* Profile Header */}
@@ -85,8 +97,8 @@ export function ProfilePage() {
               <p className="text-xs text-primary-foreground/70">我的收藏</p>
             </button>
             <div className="text-center">
-              <p className="text-xl font-bold text-primary-foreground">3</p>
-              <p className="text-xs text-primary-foreground/70">优惠券</p>
+              <p className="text-xl font-bold text-primary-foreground">{user.points || 0}</p>
+              <p className="text-xs text-primary-foreground/70">积分</p>
             </div>
           </div>
         </div>
@@ -166,12 +178,12 @@ export function ProfilePage() {
                       {order.items.map((item, idx) => (
                         <div key={idx} className="flex items-center gap-3">
                           <img
-                            src={item.product.images[0]}
-                            alt={item.product.name}
-                            className="h-12 w-12 rounded-lg object-cover"
+                            src={item.image || ''}
+                            alt={item.name || ''}
+                            className="h-12 w-12 rounded-lg object-cover bg-secondary"
                           />
                           <div className="flex-1">
-                            <p className="line-clamp-1 text-sm text-foreground">{item.product.name}</p>
+                            <p className="line-clamp-1 text-sm text-foreground">{item.name}</p>
                             <p className="text-xs text-muted-foreground">x{item.quantity}</p>
                           </div>
                           <p className="text-sm font-medium text-foreground">{formatPrice(item.price)}</p>
@@ -179,7 +191,7 @@ export function ProfilePage() {
                       ))}
                     </div>
                     <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-3">
-                      <span className="text-xs text-muted-foreground">{order.createdAt}</span>
+                      <span className="text-xs text-muted-foreground">{order.createdAt ? new Date(order.createdAt).toLocaleString('zh-CN') : ''}</span>
                       <span className="text-sm font-bold text-foreground">合计 {formatPrice(order.totalPrice)}</span>
                     </div>
                   </div>
