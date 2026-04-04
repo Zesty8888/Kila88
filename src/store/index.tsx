@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useReducer, useEffect } from 'react'
 import type { Product, CartItem, Order } from '@/types'
 import { normalizeProduct, normalizeOrder } from '@/types'
 import { api, setToken, clearToken, getToken } from '@/lib/api'

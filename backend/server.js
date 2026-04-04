@@ -6,8 +6,8 @@ import db from './db.js';
 import { seedDatabase } from './seed.js';
 
 const app = express();
-const PORT = 3001;
-const JWT_SECRET = 'luxe-mall-secret-key-2024';
+const PORT = process.env.PORT || 3001;
+const JWT_SECRET = process.env.JWT_SECRET || 'luxe-mall-secret-key-2024';
 
 app.use(cors());
 app.use(express.json());
@@ -332,8 +332,8 @@ function formatOrder(o) {
 
 /* ═══════════ START ═══════════ */
 seedDatabase();
-app.listen(PORT, () => {
-  console.log(`\n🚀 LUXE Mall Backend API running at http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🚀 LUXE Mall Backend API running on port ${PORT}`);
   console.log(`\n📋 Admin account: admin@luxe.com / admin123`);
   console.log(`📋 User account:  user@luxe.com / user123\n`);
 });
