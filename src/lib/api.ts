@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'https://kila88.onrender.com/api';
 
 let token = localStorage.getItem('mall_token') || '';
 
